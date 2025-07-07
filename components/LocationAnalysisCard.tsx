@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { PowerPlant } from '@/lib/supabase';
 import { X } from 'lucide-react';
 
@@ -17,18 +18,21 @@ interface LocationAnalysisCardProps {
     onClose: () => void;
     onPlantZoom: (plant: PowerPlant) => void;
     onReturnToLocation: () => void;
+    onRadiusChange: (radius: number) => void;
     position?: { x: number; y: number };
 }
 
 export default function LocationAnalysisCard({
     location,
     countyInfo,
-    nearbyPowerPlants,
+    nearbyPowerPlants: allNearbyPowerPlants,
     onClose,
     onPlantZoom,
     onReturnToLocation,
+    onRadiusChange,
     position
 }: LocationAnalysisCardProps) {
+    const [searchRadius, setSearchRadius] = useState(30); // Default 30 miles
     const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
         const R = 3959; // Earth's radius in miles
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -40,6 +44,18 @@ export default function LocationAnalysisCard({
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         return R * c;
     };
+
+    // Filter power plants based on selected radius
+    const nearbyPowerPlants = useMemo(() => {
+        return allNearbyPowerPlants.filter(plant => {
+            if (!plant.latitude || !plant.longitude) return false;
+            const distance = calculateDistance(
+                location.lat, location.lng,
+                plant.latitude, plant.longitude
+            );
+            return distance <= searchRadius;
+        });
+    }, [allNearbyPowerPlants, searchRadius, location]);
 
     const getPlantTypeColor = (type: string | null) => {
         const typeNormalized = type?.toLowerCase() || '';
@@ -144,14 +160,31 @@ export default function LocationAnalysisCard({
 
                 {/* Nearby Power Plants */}
                 <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                        Nearby Power Plants ({nearbyPowerPlants.length})
-                    </h4>
+                    <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium text-gray-900">
+                            Nearby Power Plants ({nearbyPowerPlants.length})
+                        </h4>
+                        <select
+                            value={searchRadius}
+                            onChange={(e) => {
+                                const newRadius = Number(e.target.value);
+                                setSearchRadius(newRadius);
+                                onRadiusChange(newRadius);
+                            }}
+                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value={10}>10 miles</option>
+                            <option value={30}>30 miles</option>
+                            <option value={50}>50 miles</option>
+                            <option value={75}>75 miles</option>
+                            <option value={100}>100 miles</option>
+                        </select>
+                    </div>
                     {nearbyPowerPlants.length === 0 ? (
-                        <p className="text-sm text-gray-500">No power plants within 30 mile radius</p>
+                        <p className="text-sm text-gray-500">No power plants within {searchRadius} mile radius</p>
                     ) : (
                         <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {nearbyPowerPlants.slice(0, 10).map((plant) => {
+                            {nearbyPowerPlants.map((plant) => {
                                 const distance = calculateDistance(
                                     location.lat, location.lng,
                                     plant.latitude!, plant.longitude!
@@ -191,11 +224,6 @@ export default function LocationAnalysisCard({
                                     </button>
                                 );
                             })}
-                            {nearbyPowerPlants.length > 10 && (
-                                <p className="text-xs text-gray-500 text-center py-2">
-                                    ... and {nearbyPowerPlants.length - 10} more plants
-                                </p>
-                            )}
                         </div>
                     )}
                 </div>

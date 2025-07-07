@@ -42,6 +42,7 @@ export default function SiteEvaluationMap() {
     const [selectedLine, setSelectedLine] = useState<TransmissionLine | null>(null);
     const [selectedLinePosition, setSelectedLinePosition] = useState<{x: number, y: number} | null>(null);
     const [searchedLocation, setSearchedLocation] = useState<{lng: number, lat: number, name?: string} | null>(null);
+    const [highlightRadius, setHighlightRadius] = useState(30); // Default 30 miles for highlighting
 
     const { types: availableTypes, statuses: availableStatuses } = useFilterOptions();
 
@@ -163,12 +164,26 @@ export default function SiteEvaluationMap() {
         return R * c;
     };
 
+    // Get ALL power plants for the searched location (independent of zoom)
+    const { plants: allPowerPlants } = usePowerPlants({ 
+        bounds: searchedLocation ? {
+            west: searchedLocation.lng - 2,  // ~140 miles at equator
+            south: searchedLocation.lat - 2,
+            east: searchedLocation.lng + 2,
+            north: searchedLocation.lat + 2
+        } : bounds,
+        zoom: 10,  // High zoom to get ALL plants including small ones
+        filters: filters  // Keep the same filters (types, statuses)
+    });
+    
     // Filter power plants near searched location
     const nearbyPowerPlants = useMemo(() => {
         if (!searchedLocation) return [];
         
-        const maxDistance = 30; // 30 mile radius
-        return plants.filter(plant => {
+        const plantsToFilter = searchedLocation ? allPowerPlants : plants;
+        const maxDistance = 100; // 100 mile radius max (will be filtered in LocationAnalysisCard)
+        
+        return plantsToFilter.filter(plant => {
             if (!plant.latitude || !plant.longitude) return false;
             
             const distance = calculateDistance(
@@ -188,7 +203,7 @@ export default function SiteEvaluationMap() {
             );
             return distA - distB;
         });
-    }, [plants, searchedLocation]);
+    }, [allPowerPlants, plants, searchedLocation]);
 
     // Convert transmission lines to GeoJSON format
     const transmissionLinesGeoJSON = useMemo(() => {
@@ -342,8 +357,15 @@ export default function SiteEvaluationMap() {
                     const markerSize = getMarkerSize(plant.capacity_mw);
                     const markerColor = getMarkerColor(plant.type);
                     
-                    // Check if this plant is near the searched location
-                    const isNearSearched = searchedLocation && nearbyPowerPlants.some(p => p.id === plant.id);
+                    // Check if this plant is within 30 miles of the searched location
+                    let isNearSearched = false;
+                    if (searchedLocation && plant.latitude && plant.longitude) {
+                        const distance = calculateDistance(
+                            searchedLocation.lat, searchedLocation.lng,
+                            plant.latitude, plant.longitude
+                        );
+                        isNearSearched = distance <= highlightRadius; // Highlight plants within selected radius
+                    }
                     
                     return (
                         <Marker
@@ -439,6 +461,7 @@ export default function SiteEvaluationMap() {
                             }));
                         }
                     }}
+                    onRadiusChange={setHighlightRadius}
                 />
             )}
         </div>

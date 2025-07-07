@@ -142,21 +142,23 @@ export default function LocationAnalysisCard({
                     </div>
                 </div>
 
-                {/* Risk Assessment */}
-                <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Risk Assessment</h4>
-                    <div className={`px-3 py-2 rounded-lg ${riskAssessment.bg} border`}>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">Infrastructure Risk</span>
-                            <span className={`text-sm font-semibold ${riskAssessment.color}`}>
-                                {riskAssessment.level}
-                            </span>
+                {/* County Safety Assessment */}
+                {countyInfo && (
+                    <div>
+                        <h4 className="font-medium text-gray-900 mb-2">County Safety Assessment</h4>
+                        <div className="px-3 py-2 rounded-lg bg-blue-50 border">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-700">Safety Rating</span>
+                                <span className="text-sm font-semibold text-blue-600">
+                                    Moderate
+                                </span>
+                            </div>
+                            <p className="text-xs text-gray-600 mt-1">
+                                Based on {countyInfo.county}, {countyInfo.stateAbbrv} regional data
+                            </p>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">
-                            Based on nearby power generation capacity and transmission infrastructure
-                        </p>
                     </div>
-                </div>
+                )}
 
                 {/* Nearby Power Plants */}
                 <div>

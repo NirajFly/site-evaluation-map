@@ -37,7 +37,7 @@ export default function SiteEvaluationMap() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [showLoading, setShowLoading] = useState(false);
-    const [isSearching, setIsSearching] = useState(false);
+    // const [isSearching, setIsSearching] = useState(false); // Reserved for future search state UI
     const [showTransmissionLines, setShowTransmissionLines] = useState(false);
     const [selectedLine, setSelectedLine] = useState<TransmissionLine | null>(null);
     const [selectedLinePosition, setSelectedLinePosition] = useState<{x: number, y: number} | null>(null);
@@ -57,7 +57,7 @@ export default function SiteEvaluationMap() {
         enabled: showTransmissionLines 
     });
     
-    const { countyInfo, loading: countyLoading } = useCountyFromCoords({
+    const { countyInfo } = useCountyFromCoords({
         latitude: searchedLocation?.lat,
         longitude: searchedLocation?.lng
     });
@@ -101,7 +101,7 @@ export default function SiteEvaluationMap() {
 
     // Handle location search
     const handleLocationSelect = (lng: number, lat: number, name?: string) => {
-        setIsSearching(true);
+        // setIsSearching(true); // Reserved for future search state UI
         setSearchedLocation({ lng, lat, name });
         
         // Clear any selected plants/lines
@@ -128,7 +128,7 @@ export default function SiteEvaluationMap() {
         }));
         
         // Clear searching state after a short delay
-        setTimeout(() => setIsSearching(false), 1000);
+        // setTimeout(() => setIsSearching(false), 1000); // Reserved for future search state UI
     };
 
     // Calculate marker radius based on capacity
@@ -254,8 +254,8 @@ export default function SiteEvaluationMap() {
                                     return; // Don't clear selections if clicking on line
                                 }
                             }
-                        } catch (error) {
-                            console.log('Transmission line layer not ready yet');
+                        } catch (error: unknown) {
+                            console.log('Transmission line layer not ready yet', error);
                         }
                     }
                     

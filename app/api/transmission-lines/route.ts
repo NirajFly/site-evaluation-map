@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const south = parseFloat(searchParams.get('south') || '-90');
     const east = parseFloat(searchParams.get('east') || '180');
     const north = parseFloat(searchParams.get('north') || '90');
-    const zoom = parseFloat(searchParams.get('zoom') || '1');
+    // const zoom = parseFloat(searchParams.get('zoom') || '1'); // Reserved for future zoom-based filtering
 
     try {
         let query = supabase
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
         }
 
         return NextResponse.json({ lines: data || [] });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('API Error:', error);
         return NextResponse.json({ error: 'Failed to fetch transmission lines' }, { status: 500 });
     }

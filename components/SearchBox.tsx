@@ -49,7 +49,13 @@ export default function SearchBox({ onLocationSelect }: SearchBoxProps) {
 
             // Process Mapbox results
             if (mapboxResponse.status === 'fulfilled' && mapboxResponse.value.features) {
-                const mapboxResults = mapboxResponse.value.features.map((feature: any) => ({
+                const mapboxResults = mapboxResponse.value.features.map((feature: {
+                    id: string;
+                    text: string;
+                    place_name: string;
+                    center: [number, number];
+                    place_type?: string[];
+                }) => ({
                     id: feature.id,
                     name: feature.text,
                     formatted_address: feature.place_name,
@@ -67,7 +73,13 @@ export default function SearchBox({ onLocationSelect }: SearchBoxProps) {
 
             // Process Google Places results
             if (googleResponse.status === 'fulfilled' && googleResponse.value.candidates) {
-                const googleResults = googleResponse.value.candidates.map((place: any) => ({
+                const googleResults = googleResponse.value.candidates.map((place: {
+                    place_id: string;
+                    name: string;
+                    formatted_address: string;
+                    geometry: { location: { lat: number; lng: number } };
+                    types: string[];
+                }) => ({
                     id: place.place_id,
                     name: place.name,
                     formatted_address: place.formatted_address,
@@ -157,7 +169,7 @@ export default function SearchBox({ onLocationSelect }: SearchBoxProps) {
                 
                 {suggestions.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {suggestions.map((suggestion, index) => (
+                        {suggestions.map((suggestion) => (
                             <button
                                 key={suggestion.id}
                                 onClick={() => handleSuggestionClick(suggestion)}

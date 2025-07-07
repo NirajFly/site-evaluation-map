@@ -67,23 +67,6 @@ export default function LocationAnalysisCard({
         return 'text-blue-600 bg-blue-50';
     };
 
-    const getRiskLevel = () => {
-        if (!nearbyPowerPlants.length) return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50' };
-        
-        const totalCapacity = nearbyPowerPlants.reduce((sum, plant) => sum + (plant.capacity_mw || 0), 0);
-        const fossilFuelPlants = nearbyPowerPlants.filter(plant => 
-            plant.type?.toLowerCase().includes('coal') || plant.type?.toLowerCase().includes('oil/gas')
-        );
-        
-        if (totalCapacity > 2000 || fossilFuelPlants.length > 3) {
-            return { level: 'High', color: 'text-red-600', bg: 'bg-red-50' };
-        } else if (totalCapacity > 1000 || fossilFuelPlants.length > 1) {
-            return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-50' };
-        }
-        return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50' };
-    };
-
-    const riskAssessment = getRiskLevel();
 
     // Calculate position - similar to other cards
     const cardStyle = position ? {

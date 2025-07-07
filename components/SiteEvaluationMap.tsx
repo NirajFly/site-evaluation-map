@@ -42,7 +42,6 @@ export default function SiteEvaluationMap() {
     const [selectedLine, setSelectedLine] = useState<TransmissionLine | null>(null);
     const [selectedLinePosition, setSelectedLinePosition] = useState<{x: number, y: number} | null>(null);
     const [searchedLocation, setSearchedLocation] = useState<{lng: number, lat: number, name?: string} | null>(null);
-    const [highlightRadius, setHighlightRadius] = useState(30); // Default 30 miles for highlighting
 
     const { types: availableTypes, statuses: availableStatuses } = useFilterOptions();
 
@@ -440,7 +439,7 @@ export default function SiteEvaluationMap() {
                             }));
                         }
                     }}
-                    onRadiusChange={setHighlightRadius}
+                    onRadiusChange={() => {}}
                 />
             )}
         </div>

@@ -423,8 +423,8 @@ export default function SiteEvaluationMap() {
                         if (plant.latitude && plant.longitude) {
                             setViewState(prev => ({
                                 ...prev,
-                                longitude: plant.longitude,
-                                latitude: plant.latitude,
+                                longitude: plant.longitude!,
+                                latitude: plant.latitude!,
                                 zoom: Math.max(prev.zoom, 12) // Zoom in to at least level 12
                             }));
                         }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client } from '@googlemaps/google-maps-services-js';
+import { Client, PlaceInputType } from '@googlemaps/google-maps-services-js';
 
 const client = new Client({});
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         const response = await client.findPlaceFromText({
             params: {
                 input: query,
-                inputtype: 'textquery',
+                inputtype: PlaceInputType.textQuery,
                 key: googleApiKey,
                 fields: ['place_id', 'name', 'geometry', 'formatted_address', 'types'],
                 locationbias: 'country:us',

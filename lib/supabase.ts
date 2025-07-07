@@ -41,7 +41,7 @@ export interface EIAElectricityPrice {
 
 export interface TransmissionLine {
     id: number;
-    geo_shape: Record<string, unknown>;
+    geo_shape: GeoJSON.Geometry;
     longitude: number | null;
     latitude: number | null;
     shape_length: number | null;

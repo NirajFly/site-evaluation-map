@@ -166,10 +166,10 @@ export default function LocationAnalysisCard({
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <h5 className="font-medium text-gray-900 text-sm hover:text-blue-600">
-                                                    {plant.plant_name}
+                                                    {plant.plant_project_name || 'Unknown Plant'}
                                                 </h5>
                                                 <p className="text-xs text-gray-600 mt-1">
-                                                    {plant.city}, {plant.state_name}
+                                                    {plant.city}, {plant.subnational_unit_state_province}
                                                 </p>
                                             </div>
                                             <div className="text-right text-xs text-gray-500">

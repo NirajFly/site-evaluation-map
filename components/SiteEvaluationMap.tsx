@@ -50,6 +50,7 @@ export default function SiteEvaluationMap() {
     const [showSilerCityInfo, setShowSilerCityInfo] = useState(false);
     const [silerCityPosition, setSilerCityPosition] = useState<{x: number, y: number} | null>(null);
     const [showFiberNetwork, setShowFiberNetwork] = useState(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedFiberLines, setSelectedFiberLines] = useState<Array<{ line: any; position: { x: number; y: number } }>>([]);
 
     // Siler City site coordinates

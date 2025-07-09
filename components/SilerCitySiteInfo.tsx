@@ -104,7 +104,7 @@ export default function SilerCitySiteInfo({ onClose, position }: SilerCitySiteIn
                     ].map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
+                            onClick={() => setActiveTab(tab.id as 'fiber' | 'infrastructure' | 'advantages')}
                             className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                                 activeTab === tab.id
                                     ? 'border-blue-500 text-blue-600'

@@ -16,16 +16,20 @@ import SearchBox from './SearchBox';
 import TransmissionLinesToggle from './TransmissionLinesToggle';
 import TransmissionLineCard from './TransmissionLineCard';
 import LocationAnalysisCard from './LocationAnalysisCard';
+import MapStyleToggle, { MapStyle } from './MapStyleToggle';
+import SilerCitySiteInfo from './SilerCitySiteInfo';
+import FiberNetworkToggle from './FiberNetworkToggle';
+import { useHighwayRoutes } from '@/hooks/useHighwayRoutes';
 
 export default function SiteEvaluationMap() {
     const mapRef = useRef<MapRef>(null);
-    const [viewState, setViewState] = useState({
+    const [viewState, setViewState] = useState(() => ({
         longitude: mapboxConfig.defaultCenter.longitude,
         latitude: mapboxConfig.defaultCenter.latitude,
         zoom: mapboxConfig.defaultZoom,
         pitch: 45,
         bearing: 0
-    });
+    }));
     const [selectedPlant, setSelectedPlant] = useState<PowerPlant | null>(null);
     const [selectedPlantPosition, setSelectedPlantPosition] = useState<{x: number, y: number} | null>(null);
     const [bounds, setBounds] = useState<{
@@ -33,7 +37,7 @@ export default function SiteEvaluationMap() {
         south: number;
         east: number;
         north: number;
-    }>(mapboxConfig.northeastUSBounds);
+    }>(() => mapboxConfig.northeastUSBounds);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
     const [showLoading, setShowLoading] = useState(false);
@@ -42,6 +46,87 @@ export default function SiteEvaluationMap() {
     const [selectedLine, setSelectedLine] = useState<TransmissionLine | null>(null);
     const [selectedLinePosition, setSelectedLinePosition] = useState<{x: number, y: number} | null>(null);
     const [searchedLocation, setSearchedLocation] = useState<{lng: number, lat: number, name?: string} | null>(null);
+    const [mapStyle, setMapStyle] = useState<MapStyle>('satellite');
+    const [showSilerCityInfo, setShowSilerCityInfo] = useState(false);
+    const [silerCityPosition, setSilerCityPosition] = useState<{x: number, y: number} | null>(null);
+    const [showFiberNetwork, setShowFiberNetwork] = useState(true);
+    const [selectedFiberLines, setSelectedFiberLines] = useState<Array<{ line: any; position: { x: number; y: number } }>>([]);
+
+    // Siler City site coordinates
+    const silerCitySite = useMemo(() => ({
+        lng: -79.5506,
+        lat: 35.7419,
+        name: "1000 Carolina Core Pkwy, Siler City, NC 27344"
+    }), []);
+
+    // Fetch highway routes using Mapbox API
+    const { routes: highwayRoutes, loading: routesLoading, error: routesError } = useHighwayRoutes({
+        enabled: showFiberNetwork
+    });
+
+    // Hardcoded rail route for better visibility
+    const railRoute = useMemo(() => ({
+        type: 'Feature' as const,
+        properties: {
+            name: "Norfolk Southern Rail ROW",
+            label: "Zayo long-haul",
+            color: "#10B981",
+            fiber_type: "long-haul"
+        },
+        geometry: {
+            type: 'LineString' as const,
+            coordinates: [
+                // Hardcoded Norfolk Southern rail line from Greensboro to Sanford
+                [-79.7900, 36.0700], // Greensboro area
+                [-79.7500, 36.0200],
+                [-79.7100, 35.9700],
+                [-79.6800, 35.9300],
+                [-79.6500, 35.8900],
+                [-79.6200, 35.8500],
+                [-79.5900, 35.8100],
+                [-79.5700, 35.7800],
+                [-79.5500, 35.7500],
+                [-79.5350, 35.7200],
+                [-79.5250, 35.6900],
+                [-79.5200, 35.6600],
+                [-79.5150, 35.6300],
+                [-79.5100, 35.6000],
+                [-79.5080, 35.5700],
+                [-79.5060, 35.5400],
+                [-79.5050, 35.5100],
+                [-79.5040, 35.4800],
+                [-79.5030, 35.4500],
+                [-79.5020, 35.4200],
+                [-79.5010, 35.3900],
+                [-79.5000, 35.3600] // Sanford area
+            ]
+        }
+    }), []);
+
+    // Convert highway routes to GeoJSON and add hardcoded rail
+    const fiberNetworkGeoJSON = useMemo(() => {
+        const apiRoutes = highwayRoutes.map(route => ({
+            type: 'Feature' as const,
+            properties: {
+                name: route.name,
+                label: route.label,
+                color: route.color,
+                fiber_type: route.fiber_type
+            },
+            geometry: {
+                type: 'LineString' as const,
+                coordinates: route.coordinates
+            }
+        }));
+
+        // Filter out the API rail route and add our hardcoded one
+        const filteredRoutes = apiRoutes.filter(route => route.properties.name !== "Norfolk Southern Rail ROW");
+        
+        return {
+            type: 'FeatureCollection' as const,
+            features: [...filteredRoutes, railRoute]
+        };
+    }, [highwayRoutes, railRoute]);
 
     const { types: availableTypes, statuses: availableStatuses } = useFilterOptions();
 
@@ -230,45 +315,70 @@ export default function SiteEvaluationMap() {
                 onToggle={setShowTransmissionLines}
             />
             
+            <FiberNetworkToggle
+                showFiberNetwork={showFiberNetwork}
+                onToggle={setShowFiberNetwork}
+                loading={routesLoading}
+                error={routesError}
+            />
+            
+            <MapStyleToggle
+                currentStyle={mapStyle}
+                onStyleChange={setMapStyle}
+            />
+            
             <Map
                 ref={mapRef}
                 {...viewState}
                 onMove={evt => setViewState(evt.viewState)}
                 onMoveEnd={handleMoveEnd}
                 onClick={(e) => {
-                    // Check if clicking on transmission line (only if layer exists)
-                    if (showTransmissionLines && transmissionLines.length > 0) {
+                    // Check if clicking on fiber network lines
+                    if (showFiberNetwork && fiberNetworkGeoJSON.features.length > 0) {
                         try {
                             const features = e.target.queryRenderedFeatures(e.point, {
-                                layers: ['transmission-lines-layer']
+                                layers: ['fiber-network-long-haul', 'fiber-network-middle-mile', 'fiber-network-last-mile']
                             });
                             
                             if (features.length > 0) {
                                 const feature = features[0];
-                                const lineData = transmissionLines.find(line => line.id === feature.properties?.id);
-                                if (lineData) {
-                                    setSelectedLine(lineData);
-                                    setSelectedLinePosition({
-                                        x: e.point.x,
-                                        y: e.point.y
-                                    });
-                                    return; // Don't clear selections if clicking on line
-                                }
+                                const newCard = {
+                                    line: feature.properties,
+                                    position: { x: e.point.x, y: e.point.y }
+                                };
+                                
+                                // Check if this fiber line is already selected
+                                setSelectedFiberLines(prev => {
+                                    const existing = prev.find(f => f.line.fiber_type === feature.properties?.fiber_type);
+                                    if (existing) {
+                                        // Update position if already selected
+                                        return prev.map(f => 
+                                            f.line.fiber_type === feature.properties?.fiber_type 
+                                                ? newCard 
+                                                : f
+                                        );
+                                    } else {
+                                        // Add new selection
+                                        return [...prev, newCard];
+                                    }
+                                });
+                                return; // Don't clear selections if clicking on fiber line
                             }
                         } catch (error: unknown) {
-                            console.log('Transmission line layer not ready yet', error);
+                            console.log('Fiber network layer not ready yet', error);
                         }
                     }
                     
-                    // Clear all selections if clicking on empty space
+                    // Clear selections if clicking on empty space
                     setSelectedPlant(null);
                     setSelectedPlantPosition(null);
                     setSelectedLine(null);
                     setSelectedLinePosition(null);
+                    setSelectedFiberLines([]);
                 }}
                 mapboxAccessToken={mapboxConfig.accessToken}
                 style={{ width: '100%', height: '100%' }}
-                mapStyle={mapboxConfig.style}
+                mapStyle={mapboxConfig.styles[mapStyle]}
                 projection={mapboxConfig.projection}
                 terrain={{ source: 'mapbox-dem', exaggeration: 1.5 }}
                 onLoad={(e) => {
@@ -331,9 +441,222 @@ export default function SiteEvaluationMap() {
                     </Source>
                 )}
 
-                {showLoading && (
+                {/* Fiber Network Layers - Separate layers for each type */}
+                {showFiberNetwork && !routesLoading && fiberNetworkGeoJSON.features.length > 0 && (
+                    <Source
+                        id="fiber-network"
+                        type="geojson"
+                        data={fiberNetworkGeoJSON}
+                    >
+                        {/* Long-haul fiber (rail corridor - offset right) */}
+                        <Layer
+                            id="fiber-network-long-haul"
+                            type="line"
+                            filter={['==', ['get', 'fiber_type'], 'long-haul']}
+                            paint={{
+                                'line-color': ['get', 'color'],
+                                'line-width': 6,
+                                'line-opacity': 1.0,
+                                'line-dasharray': [8, 4],
+                                'line-offset': 15
+                            }}
+                        />
+                        
+                        {/* Middle-mile fiber (US-421 - offset left) */}
+                        <Layer
+                            id="fiber-network-middle-mile"
+                            type="line"
+                            filter={['==', ['get', 'fiber_type'], 'middle-mile']}
+                            paint={{
+                                'line-color': ['get', 'color'],
+                                'line-width': 5,
+                                'line-opacity': 1.0,
+                                'line-dasharray': [6, 3],
+                                'line-offset': -12
+                            }}
+                        />
+                        
+                        {/* Last-mile fiber (US-64 - slight offset) */}
+                        <Layer
+                            id="fiber-network-last-mile"
+                            type="line"
+                            filter={['==', ['get', 'fiber_type'], 'last-mile']}
+                            paint={{
+                                'line-color': ['get', 'color'],
+                                'line-width': 4,
+                                'line-opacity': 1.0,
+                                'line-offset': 8
+                            }}
+                        />
+                        
+                        <Layer
+                            id="fiber-network-labels"
+                            type="symbol"
+                            layout={{
+                                'text-field': ['get', 'label'],
+                                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                                'text-size': [
+                                    'interpolate',
+                                    ['linear'],
+                                    ['zoom'],
+                                    8, 8,  // Show at all zoom levels
+                                    10, 10,
+                                    12, 12,
+                                    16, 14
+                                ],
+                                'symbol-placement': 'line',
+                                'text-rotation-alignment': 'map',
+                                'text-pitch-alignment': 'viewport',
+                                'text-max-angle': 20,
+                                'text-padding': 15,
+                                'text-allow-overlap': false,
+                                'text-ignore-placement': false,
+                                'symbol-spacing': 500,
+                                'text-offset': [0, -2]  // Offset labels above the lines
+                            }}
+                            paint={{
+                                'text-color': ['get', 'color'],
+                                'text-halo-color': 'white',
+                                'text-halo-width': 2,
+                                'text-opacity': 0.9
+                            }}
+                        />
+                    </Source>
+                )}
+
+                {/* Fiber Access Point Markers */}
+                {showFiberNetwork && (
+                    <>
+                        {/* Primary Site Access Points */}
+                        <Marker
+                            longitude={-79.5506}
+                            latitude={35.7419}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-lg" title="US-64 Fiber Access Point"></div>
+                            </div>
+                        </Marker>
+                        
+                        <Marker
+                            longitude={-79.5380}
+                            latitude={35.7435}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-lg" title="Rail ROW Splice Point"></div>
+                            </div>
+                        </Marker>
+                        
+                        <Marker
+                            longitude={-79.4620}
+                            latitude={35.7320}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-purple-500 rounded-full border-2 border-white shadow-lg" title="MCNC Point of Presence"></div>
+                            </div>
+                        </Marker>
+                        
+                        {/* Major Backbone Hubs */}
+                        <Marker
+                            longitude={-79.7900}
+                            latitude={36.0600}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-gray-700 rounded-full border-2 border-white shadow-lg"></div>
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 bg-white px-1 rounded shadow">
+                                    Greensboro Hub
+                                </div>
+                            </div>
+                        </Marker>
+                        
+                        <Marker
+                            longitude={-79.0000}
+                            latitude={35.2700}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-gray-700 rounded-full border-2 border-white shadow-lg"></div>
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 bg-white px-1 rounded shadow">
+                                    RTP Hub
+                                </div>
+                            </div>
+                        </Marker>
+                        
+                        <Marker
+                            longitude={-79.5230}
+                            latitude={35.4100}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-gray-700 rounded-full border-2 border-white shadow-lg"></div>
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 bg-white px-1 rounded shadow">
+                                    Sanford Junction
+                                </div>
+                            </div>
+                        </Marker>
+                        
+                        {/* Regional Access Points - Simplified */}
+                        <Marker
+                            longitude={-79.8500}
+                            latitude={35.7100}
+                            anchor="center"
+                        >
+                            <div className="w-2 h-2 bg-blue-400 rounded-full border border-white shadow-lg" title="Ramseur Regional Access"></div>
+                        </Marker>
+                        
+                        <Marker
+                            longitude={-78.9900}
+                            latitude={35.7990}
+                            anchor="center"
+                        >
+                            <div className="w-2 h-2 bg-blue-400 rounded-full border border-white shadow-lg" title="Apex Regional Access"></div>
+                        </Marker>
+                    </>
+                )}
+
+                {/* Siler City Site Marker */}
+                <Marker
+                    longitude={silerCitySite.lng}
+                    latitude={silerCitySite.lat}
+                    anchor="bottom"
+                    onClick={(e) => {
+                        e.originalEvent.stopPropagation();
+                        setShowSilerCityInfo(true);
+                        if (mapRef.current) {
+                            const map = mapRef.current.getMap();
+                            const point = map.project([silerCitySite.lng, silerCitySite.lat]);
+                            setSilerCityPosition({
+                                x: point.x,
+                                y: point.y
+                            });
+                        }
+                    }}
+                >
+                    <div className="relative">
+                        <div className="w-10 h-10 bg-blue-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
+                            <div className="w-4 h-4 bg-white rounded-full"></div>
+                        </div>
+                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-600"></div>
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mb-2">
+                            <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap max-w-64 truncate">
+                                Siler City Data Center Site
+                            </div>
+                        </div>
+                    </div>
+                </Marker>
+
+                {(showLoading || routesLoading) && (
                     <div className="absolute bottom-8 right-8 bg-white/90 px-3 py-2 rounded text-sm text-gray-600">
-                        Loading sites...
+                        {routesLoading ? 'Loading highway routes...' : 'Loading sites...'}
+                    </div>
+                )}
+
+                {routesError && showFiberNetwork && (
+                    <div className="absolute bottom-8 left-8 bg-red-50 border border-red-200 px-3 py-2 rounded text-sm text-red-600">
+                        Failed to load fiber routes: {routesError}
                     </div>
                 )}
 
@@ -412,6 +735,71 @@ export default function SiteEvaluationMap() {
                 />
             )}
 
+            {selectedFiberLines.map((fiberCard, index) => (
+                <div
+                    key={fiberCard.line.fiber_type}
+                    className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-4 max-w-xs"
+                    style={{
+                        left: fiberCard.position.x + (index * 250), // Offset cards horizontally
+                        top: fiberCard.position.y,
+                        transform: 'translate(-50%, -100%)',
+                        marginTop: '-10px'
+                    }}
+                >
+                    <button
+                        onClick={() => {
+                            setSelectedFiberLines(prev => prev.filter(f => f.line.fiber_type !== fiberCard.line.fiber_type));
+                        }}
+                        className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-lg leading-none"
+                    >
+                        ×
+                    </button>
+                    
+                    <div className="mb-2">
+                        <h3 className="font-semibold text-gray-800 mb-1" style={{ color: fiberCard.line.color }}>
+                            {fiberCard.line.label}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                            {fiberCard.line.name}
+                        </p>
+                    </div>
+                    
+                    <div className="space-y-1 text-sm">
+                        <div>
+                            <span className="font-medium text-gray-700">Type:</span>
+                            <span className="ml-2 text-gray-600 capitalize">{fiberCard.line.fiber_type}</span>
+                        </div>
+                        
+                        {fiberCard.line.fiber_type === 'long-haul' && (
+                            <div className="mt-2 p-2 bg-green-50 rounded text-xs text-green-700">
+                                <strong>Long-haul backbone</strong><br/>
+                                • 864+ strand capacity<br/>
+                                • &lt;1.8ms latency to site<br/>
+                                • Zayo & Lumen carriers
+                            </div>
+                        )}
+                        
+                        {fiberCard.line.fiber_type === 'middle-mile' && (
+                            <div className="mt-2 p-2 bg-purple-50 rounded text-xs text-purple-700">
+                                <strong>Middle-mile transport</strong><br/>
+                                • MCNC/NCREN backbone<br/>
+                                • ~2.5ms latency to RTP<br/>
+                                • Dark fiber IRU available
+                            </div>
+                        )}
+                        
+                        {fiberCard.line.fiber_type === 'last-mile' && (
+                            <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                                <strong>County frontage access</strong><br/>
+                                • 24-144 strand capacity<br/>
+                                • &lt;100m from site<br/>
+                                • ~2ms latency to core
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ))}
+
             {searchedLocation && (
                 <LocationAnalysisCard
                     location={searchedLocation}
@@ -441,6 +829,16 @@ export default function SiteEvaluationMap() {
                         }
                     }}
                     onRadiusChange={() => {}}
+                />
+            )}
+
+            {showSilerCityInfo && (
+                <SilerCitySiteInfo
+                    position={silerCityPosition || undefined}
+                    onClose={() => {
+                        setShowSilerCityInfo(false);
+                        setSilerCityPosition(null);
+                    }}
                 />
             )}
         </div>

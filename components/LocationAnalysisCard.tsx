@@ -67,7 +67,6 @@ export default function LocationAnalysisCard({
         return 'text-blue-600 bg-blue-50';
     };
 
-
     // Calculate position - similar to other cards
     const cardStyle = position ? {
         position: 'absolute' as const,
@@ -124,7 +123,6 @@ export default function LocationAnalysisCard({
                         )}
                     </div>
                 </div>
-
 
                 {/* Nearby Power Plants */}
                 <div>

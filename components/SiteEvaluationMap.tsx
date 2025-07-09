@@ -163,11 +163,12 @@ export default function SiteEvaluationMap() {
         return R * c;
     };
 
-    // Filter power plants near searched location
+    // Filter power plants near searched location using single data source
     const nearbyPowerPlants = useMemo(() => {
         if (!searchedLocation) return [];
         
-        const maxDistance = 30; // 30 mile radius
+        const maxDistance = 100; // 100 mile radius max (will be filtered in LocationAnalysisCard)
+        
         return plants.filter(plant => {
             if (!plant.latitude || !plant.longitude) return false;
             
@@ -342,8 +343,8 @@ export default function SiteEvaluationMap() {
                     const markerSize = getMarkerSize(plant.capacity_mw);
                     const markerColor = getMarkerColor(plant.type);
                     
-                    // Check if this plant is near the searched location
-                    const isNearSearched = searchedLocation && nearbyPowerPlants.some(p => p.id === plant.id);
+                    // Check if this plant is in the nearby plants list (simplified highlighting)
+                    const isNearSearched = nearbyPowerPlants.some(p => p.id === plant.id);
                     
                     return (
                         <Marker

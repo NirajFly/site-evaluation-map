@@ -164,26 +164,13 @@ export default function SiteEvaluationMap() {
         return R * c;
     };
 
-    // Get ALL power plants for the searched location (independent of zoom)
-    const { plants: allPowerPlants } = usePowerPlants({ 
-        bounds: searchedLocation ? {
-            west: searchedLocation.lng - 2,  // ~140 miles at equator
-            south: searchedLocation.lat - 2,
-            east: searchedLocation.lng + 2,
-            north: searchedLocation.lat + 2
-        } : bounds,
-        zoom: 10,  // High zoom to get ALL plants including small ones
-        filters: filters  // Keep the same filters (types, statuses)
-    });
-    
-    // Filter power plants near searched location
+    // Filter power plants near searched location using single data source
     const nearbyPowerPlants = useMemo(() => {
         if (!searchedLocation) return [];
         
-        const plantsToFilter = searchedLocation ? allPowerPlants : plants;
         const maxDistance = 100; // 100 mile radius max (will be filtered in LocationAnalysisCard)
         
-        return plantsToFilter.filter(plant => {
+        return plants.filter(plant => {
             if (!plant.latitude || !plant.longitude) return false;
             
             const distance = calculateDistance(
@@ -203,7 +190,7 @@ export default function SiteEvaluationMap() {
             );
             return distA - distB;
         });
-    }, [allPowerPlants, plants, searchedLocation]);
+    }, [plants, searchedLocation]);
 
     // Convert transmission lines to GeoJSON format
     const transmissionLinesGeoJSON = useMemo(() => {
@@ -357,15 +344,8 @@ export default function SiteEvaluationMap() {
                     const markerSize = getMarkerSize(plant.capacity_mw);
                     const markerColor = getMarkerColor(plant.type);
                     
-                    // Check if this plant is within 30 miles of the searched location
-                    let isNearSearched = false;
-                    if (searchedLocation && plant.latitude && plant.longitude) {
-                        const distance = calculateDistance(
-                            searchedLocation.lat, searchedLocation.lng,
-                            plant.latitude, plant.longitude
-                        );
-                        isNearSearched = distance <= highlightRadius; // Highlight plants within selected radius
-                    }
+                    // Check if this plant is in the nearby plants list (simplified highlighting)
+                    const isNearSearched = nearbyPowerPlants.some(p => p.id === plant.id);
                     
                     return (
                         <Marker

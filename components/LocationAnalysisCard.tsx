@@ -67,24 +67,6 @@ export default function LocationAnalysisCard({
         return 'text-blue-600 bg-blue-50';
     };
 
-    const getRiskLevel = () => {
-        if (!nearbyPowerPlants.length) return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50' };
-        
-        const totalCapacity = nearbyPowerPlants.reduce((sum, plant) => sum + (plant.capacity_mw || 0), 0);
-        const fossilFuelPlants = nearbyPowerPlants.filter(plant => 
-            plant.type?.toLowerCase().includes('coal') || plant.type?.toLowerCase().includes('oil/gas')
-        );
-        
-        if (totalCapacity > 2000 || fossilFuelPlants.length > 3) {
-            return { level: 'High', color: 'text-red-600', bg: 'bg-red-50' };
-        } else if (totalCapacity > 1000 || fossilFuelPlants.length > 1) {
-            return { level: 'Medium', color: 'text-yellow-600', bg: 'bg-yellow-50' };
-        }
-        return { level: 'Low', color: 'text-green-600', bg: 'bg-green-50' };
-    };
-
-    const riskAssessment = getRiskLevel();
-
     // Calculate position - similar to other cards
     const cardStyle = position ? {
         position: 'absolute' as const,
@@ -139,22 +121,6 @@ export default function LocationAnalysisCard({
                                 <p><strong>State:</strong> {countyInfo.state} ({countyInfo.stateAbbrv})</p>
                             </>
                         )}
-                    </div>
-                </div>
-
-                {/* Risk Assessment */}
-                <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Risk Assessment</h4>
-                    <div className={`px-3 py-2 rounded-lg ${riskAssessment.bg} border`}>
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">Infrastructure Risk</span>
-                            <span className={`text-sm font-semibold ${riskAssessment.color}`}>
-                                {riskAssessment.level}
-                            </span>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1">
-                            Based on nearby power generation capacity and transmission infrastructure
-                        </p>
                     </div>
                 </div>
 

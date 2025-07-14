@@ -87,14 +87,11 @@ export function useHighwayRoutes({ enabled = true }: UseHighwayRoutesProps = {})
                     'County open access'
                 ),
                 
-                // US-421 Route: Greensboro → Siler City area → RTP
+                // US-421 Route: Force it to stay on US-421 highway
                 fetchHighwayRoute(
                     [
-                        [-79.7900, 36.0600], // Greensboro
-                        [-79.6200, 35.8900], // Intermediate point
-                        [-79.4620, 35.7320], // Near Siler City
-                        [-79.2000, 35.4700], // Intermediate point
-                        [-79.0000, 35.2700]  // RTP area
+                        [-79.7900, 36.0600], // Greensboro (US-421 start)
+                        [-79.0000, 35.2700]  // RTP final destination
                     ],
                     'us-421',
                     'US-421 MCNC Fiber',
@@ -103,11 +100,11 @@ export function useHighwayRoutes({ enabled = true }: UseHighwayRoutesProps = {})
                     'MCNC middle-mile'
                 ),
                 
-                // Approximate rail route (using roads close to rail line)
+                // Rail route through Staley (Norfolk Southern ROW)
                 fetchHighwayRoute(
                     [
                         [-79.7900, 36.0700], // Greensboro area
-                        [-79.6000, 35.8000], // Intermediate
+                        [-79.5600, 35.7700], // Staley (key waypoint)
                         [-79.5400, 35.7300], // Near Siler City
                         [-79.5230, 35.4100]  // Sanford area
                     ],
@@ -115,7 +112,7 @@ export function useHighwayRoutes({ enabled = true }: UseHighwayRoutesProps = {})
                     'Norfolk Southern Rail ROW',
                     '#10B981',
                     'long-haul',
-                    'Zayo long-haul'
+                    'Zayo long-haul (via Staley)'
                 )
             ];
 

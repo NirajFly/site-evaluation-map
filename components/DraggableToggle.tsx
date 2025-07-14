@@ -41,7 +41,7 @@ export default function DraggableToggle({
             const deltaX = e.clientX - dragStart.x;
             const deltaY = e.clientY - dragStart.y;
             
-            setPosition(prev => ({
+            setPosition((prev: { x: number; y: number }) => ({
                 x: prev.x + deltaX,
                 y: prev.y + deltaY
             }));

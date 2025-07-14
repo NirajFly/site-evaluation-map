@@ -449,7 +449,7 @@ export default function SiteEvaluationMap() {
             type: 'FeatureCollection' as const,
             features
         };
-    }, [showDatacenterDistances, showDatacenters, filteredDatacenters, silerCitySite]);
+    }, [showDatacenterDistances, showDatacenters, filteredDatacenters, silerCitySite, datacenters.length]);
 
     // Create GeoJSON for proximity visualization (like reference image)
     const proximityLinesGeoJSON = useMemo(() => {

@@ -921,12 +921,6 @@ export default function SiteEvaluationMap() {
                     const markerSize = getDatacenterMarkerSize(datacenter.power_capacity_numeric || datacenter.power_capacity_mw);
                     const markerColor = getDatacenterMarkerColor(datacenter.status);
                     
-                    // Calculate distance from Siler City
-                    const distanceFromSilerCity = calculateDistance(
-                        silerCitySite.lat, silerCitySite.lng,
-                        lat, lng
-                    );
-                    
                     return (
                         <Marker
                             key={`datacenter-${datacenter.id}`}

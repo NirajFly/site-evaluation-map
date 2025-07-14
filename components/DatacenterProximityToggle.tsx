@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface DatacenterProximityToggleProps {
     showProximity: boolean;

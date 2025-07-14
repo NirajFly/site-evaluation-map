@@ -10,13 +10,18 @@ interface DraggableWrapperProps {
     className?: string;
 }
 
+interface Position {
+    x: number | null;
+    y: number | null;
+}
+
 export default function DraggableWrapper({ 
     children, 
     toggleId, 
     defaultPosition,
     className = ''
 }: DraggableWrapperProps) {
-    const [position, setPosition] = useState(() => {
+    const [position, setPosition] = useState<Position>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem(`toggle-position-${toggleId}`);
             if (saved) {
@@ -42,9 +47,9 @@ export default function DraggableWrapper({
             const deltaX = e.clientX - dragStart.x;
             const deltaY = e.clientY - dragStart.y;
             
-            setPosition(prev => ({
-                x: prev.x + deltaX,
-                y: prev.y + deltaY
+            setPosition((prev: Position) => ({
+                x: (prev.x || 0) + deltaX,
+                y: (prev.y || 0) + deltaY
             }));
             
             setDragStart({ x: e.clientX, y: e.clientY });

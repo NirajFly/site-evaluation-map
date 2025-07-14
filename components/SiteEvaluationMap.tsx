@@ -12,20 +12,12 @@ import { useDatacenterLocations, DatacenterLocation } from '@/hooks/useDatacente
 import { PowerPlant, TransmissionLine } from '@/lib/supabase';
 import SiteDetailCard from './SiteDetailCard';
 import TypeFilter from './TypeFilter';
-import StatusFilter from './StatusFilter';
 import SearchBox from './SearchBox';
-import TransmissionLinesToggle from './TransmissionLinesToggle';
 import TransmissionLineCard from './TransmissionLineCard';
 import LocationAnalysisCard from './LocationAnalysisCard';
 import MapStyleToggle, { MapStyle } from './MapStyleToggle';
 import SilerCitySiteInfo from './SilerCitySiteInfo';
-import FiberNetworkToggle from './FiberNetworkToggle';
-import DatacentersToggle from './DatacentersToggle';
-import DatacenterDistanceToggle from './DatacenterDistanceToggle';
-import DatacenterDistanceFilter from './DatacenterDistanceFilter';
 import DatacenterCard from './DatacenterCard';
-import FiberInfrastructureToggle from './FiberInfrastructureToggle';
-import DatacenterProximityToggle from './DatacenterProximityToggle';
 import { useHighwayRoutes } from '@/hooks/useHighwayRoutes';
 import TogglePanel from './TogglePanel';
 
@@ -52,7 +44,7 @@ export default function SiteEvaluationMap() {
     const [maxCapacity, setMaxCapacity] = useState<number>(10000);
     const [showLoading, setShowLoading] = useState(false);
     // const [isSearching, setIsSearching] = useState(false); // Reserved for future search state UI
-    const [showTransmissionLines, setShowTransmissionLines] = useState(false);
+    const [showTransmissionLines] = useState(false);
     const [selectedLine, setSelectedLine] = useState<TransmissionLine | null>(null);
     const [selectedLinePosition, setSelectedLinePosition] = useState<{x: number, y: number} | null>(null);
     const [searchedLocation, setSearchedLocation] = useState<{lng: number, lat: number, name?: string} | null>(null);
@@ -249,13 +241,13 @@ export default function SiteEvaluationMap() {
         if (availableTypes.length > 0 && selectedTypes.length === 0) {
             setSelectedTypes(availableTypes);
         }
-    }, [availableTypes]); // Remove dependency on selectedTypes.length
+    }, [availableTypes, selectedTypes.length]);
     
     useEffect(() => {
         if (availableStatuses.length > 0 && selectedStatuses.length === 0) {
             setSelectedStatuses(availableStatuses);
         }
-    }, [availableStatuses]); // Remove dependency on selectedStatuses.length
+    }, [availableStatuses, selectedStatuses.length]);
 
     // Show loading only after a delay to prevent flashing
     useEffect(() => {

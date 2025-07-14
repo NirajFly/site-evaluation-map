@@ -12,6 +12,7 @@ interface UsePowerPlantsProps {
     filters?: {
         type?: string[];
         status?: string[];
+        capacity?: { min: number; max: number };
     };
 }
 
@@ -53,6 +54,14 @@ export function usePowerPlants({ bounds, zoom = 1, filters }: UsePowerPlantsProp
                     query = query.in('status', ['__none__']); // Use impossible value
                 } else {
                     query = query.in('status', filters.status);
+                }
+            }
+            if (filters?.capacity) {
+                if (filters.capacity.min > 0) {
+                    query = query.gte('capacity_mw', filters.capacity.min);
+                }
+                if (filters.capacity.max < 10000) {
+                    query = query.lte('capacity_mw', filters.capacity.max);
                 }
             }
 

@@ -4,6 +4,9 @@ interface TypeFilterProps {
     selectedTypes: string[];
     availableTypes: string[];
     onTypesChange: (types: string[]) => void;
+    minCapacity: number;
+    maxCapacity: number;
+    onCapacityChange: (min: number, max: number) => void;
 }
 
 const getTypeColor = (type: string): string => {
@@ -32,8 +35,9 @@ const capitalizeFirst = (str: string): string => {
     return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export default function TypeFilter({ selectedTypes, availableTypes, onTypesChange }: TypeFilterProps) {
+export default function TypeFilter({ selectedTypes, availableTypes, onTypesChange, minCapacity, maxCapacity, onCapacityChange }: TypeFilterProps) {
     const [isOpen, setIsOpen] = useState(true);
+    const [capacityOpen, setCapacityOpen] = useState(false);
 
     const handleTypeChange = (type: string) => {
         const newTypes = selectedTypes.includes(type)
@@ -113,6 +117,73 @@ export default function TypeFilter({ selectedTypes, availableTypes, onTypesChang
                                 </label>
                             );
                         })
+                        )}
+                    </div>
+                    
+                    {/* MW Capacity Filter */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                        <button
+                            onClick={() => setCapacityOpen(!capacityOpen)}
+                            className="flex items-center justify-between w-full text-left mb-2"
+                        >
+                            <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span className="text-sm font-medium text-gray-700">MW Capacity</span>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                    {minCapacity}-{maxCapacity === 10000 ? '10k+' : maxCapacity}
+                                </span>
+                            </div>
+                            {capacityOpen ? (
+                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                </svg>
+                            ) : (
+                                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            )}
+                        </button>
+                        
+                        {capacityOpen && (
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs text-gray-600 mb-1 block">Min Capacity: {minCapacity} MW</label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="1000"
+                                        step="10"
+                                        value={minCapacity}
+                                        onChange={(e) => onCapacityChange(Number(e.target.value), maxCapacity)}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs text-gray-600 mb-1 block">Max Capacity: {maxCapacity === 10000 ? '10k+' : maxCapacity} MW</label>
+                                    <input
+                                        type="range"
+                                        min="10"
+                                        max="10000"
+                                        step="50"
+                                        value={maxCapacity}
+                                        onChange={(e) => onCapacityChange(minCapacity, Number(e.target.value))}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <button
+                                        onClick={() => onCapacityChange(0, 10000)}
+                                        className="text-xs text-blue-600 hover:text-blue-800"
+                                    >
+                                        Reset
+                                    </button>
+                                    <div className="text-xs text-gray-500">
+                                        Showing {minCapacity} - {maxCapacity === 10000 ? '10k+' : maxCapacity} MW
+                                    </div>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

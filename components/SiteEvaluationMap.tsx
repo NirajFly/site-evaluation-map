@@ -27,6 +27,7 @@ import DatacenterCard from './DatacenterCard';
 import FiberInfrastructureToggle from './FiberInfrastructureToggle';
 import DatacenterProximityToggle from './DatacenterProximityToggle';
 import { useHighwayRoutes } from '@/hooks/useHighwayRoutes';
+import TogglePanel from './TogglePanel';
 
 export default function SiteEvaluationMap() {
     const mapRef = useRef<MapRef>(null);
@@ -47,6 +48,8 @@ export default function SiteEvaluationMap() {
     }>(() => mapboxConfig.northeastUSBounds);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+    const [minCapacity, setMinCapacity] = useState<number>(0);
+    const [maxCapacity, setMaxCapacity] = useState<number>(10000);
     const [showLoading, setShowLoading] = useState(false);
     // const [isSearching, setIsSearching] = useState(false); // Reserved for future search state UI
     const [showTransmissionLines, setShowTransmissionLines] = useState(false);
@@ -180,7 +183,8 @@ export default function SiteEvaluationMap() {
 
     const filters = {
         type: selectedTypes.length === 0 ? [] : (selectedTypes.length < availableTypes.length ? selectedTypes : undefined),
-        status: selectedStatuses.length === 0 ? [] : (selectedStatuses.length < availableStatuses.length ? selectedStatuses : undefined)
+        status: selectedStatuses.length === 0 ? [] : (selectedStatuses.length < availableStatuses.length ? selectedStatuses : undefined),
+        capacity: { min: minCapacity, max: maxCapacity }
     };
 
     const { plants, loading } = usePowerPlants({ bounds, zoom: viewState.zoom, filters });
@@ -497,59 +501,36 @@ export default function SiteEvaluationMap() {
         <div className="relative w-full h-screen">
             <SearchBox onLocationSelect={handleLocationSelect} />
             
+            <TogglePanel
+                showDatacenterProximity={showDatacenterProximity}
+                onDatacenterProximityToggle={setShowDatacenterProximity}
+                showFiberNetwork={showFiberNetwork}
+                onFiberNetworkToggle={setShowFiberNetwork}
+                selectedStatuses={selectedStatuses}
+                availableStatuses={availableStatuses}
+                onStatusesChange={setSelectedStatuses}
+                showFiberInfrastructure={showFiberInfrastructure}
+                onFiberInfrastructureToggle={setShowFiberInfrastructure}
+                showDatacenters={showDatacenters}
+                onDatacentersToggle={setShowDatacenters}
+                datacenterCount={filteredDatacenters.length}
+                datacenterLoading={datacenterLoading}
+                showDatacenterDistances={showDatacenterDistances}
+                onDatacenterDistancesToggle={setShowDatacenterDistances}
+                maxDatacenterDistance={maxDatacenterDistance}
+                onDistanceChange={setMaxDatacenterDistance}
+            />
+            
             <TypeFilter
                 selectedTypes={selectedTypes}
                 availableTypes={availableTypes}
                 onTypesChange={setSelectedTypes}
-            />
-            
-            <StatusFilter
-                selectedStatuses={selectedStatuses}
-                availableStatuses={availableStatuses}
-                onStatusesChange={setSelectedStatuses}
-            />
-            
-            <TransmissionLinesToggle
-                showTransmissionLines={showTransmissionLines}
-                onToggle={setShowTransmissionLines}
-            />
-            
-            <FiberNetworkToggle
-                showFiberNetwork={showFiberNetwork}
-                onToggle={setShowFiberNetwork}
-                loading={routesLoading}
-                error={routesError}
-            />
-            
-            <DatacentersToggle
-                showDatacenters={showDatacenters}
-                onToggle={setShowDatacenters}
-                datacenterCount={filteredDatacenters.length}
-                loading={datacenterLoading}
-            />
-            
-            {showDatacenters && (
-                <>
-                    <DatacenterDistanceToggle
-                        showDistances={showDatacenterDistances}
-                        onToggle={setShowDatacenterDistances}
-                    />
-                    <DatacenterDistanceFilter
-                        maxDistance={maxDatacenterDistance}
-                        onDistanceChange={setMaxDatacenterDistance}
-                    />
-                </>
-            )}
-            
-            <FiberInfrastructureToggle
-                showFiberInfrastructure={showFiberInfrastructure}
-                onToggle={setShowFiberInfrastructure}
-                accessPointCount={9}
-            />
-            
-            <DatacenterProximityToggle
-                showProximity={showDatacenterProximity}
-                onToggle={setShowDatacenterProximity}
+                minCapacity={minCapacity}
+                maxCapacity={maxCapacity}
+                onCapacityChange={(min, max) => {
+                    setMinCapacity(min);
+                    setMaxCapacity(max);
+                }}
             />
             
             <MapStyleToggle

@@ -22,12 +22,15 @@ export default function StatusFilter({ selectedStatuses, availableStatuses, onSt
     };
 
     const toggleAllStatuses = () => {
-        if (selectedStatuses.length === availableStatuses.length) {
+        const allSelected = selectedStatuses.length === availableStatuses.length && 
+            availableStatuses.every(status => selectedStatuses.includes(status));
+        
+        if (allSelected) {
             // If all are selected, deselect all
             onStatusesChange([]);
         } else {
             // If not all are selected, select all
-            onStatusesChange(availableStatuses);
+            onStatusesChange([...availableStatuses]);
         }
     };
 
@@ -71,7 +74,7 @@ export default function StatusFilter({ selectedStatuses, availableStatuses, onSt
                             onClick={toggleAllStatuses}
                             className="text-xs text-blue-600 hover:text-blue-800"
                         >
-                            {selectedStatuses.length === availableStatuses.length ? 'Deselect All' : 'Select All'}
+                            {selectedStatuses.length === availableStatuses.length && availableStatuses.every(status => selectedStatuses.includes(status)) ? 'Deselect All' : 'Select All'}
                         </button>
                     </div>
 

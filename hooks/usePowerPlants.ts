@@ -39,11 +39,21 @@ export function usePowerPlants({ bounds, zoom = 1, filters }: UsePowerPlantsProp
                 .not('longitude', 'is', null);
 
             // Apply filters
-            if (filters?.type && filters.type.length > 0) {
-                query = query.in('type', filters.type);
+            if (filters?.type !== undefined) {
+                if (filters.type.length === 0) {
+                    // If empty array, return no results
+                    query = query.in('type', ['__none__']); // Use impossible value
+                } else {
+                    query = query.in('type', filters.type);
+                }
             }
-            if (filters?.status && filters.status.length > 0) {
-                query = query.in('status', filters.status);
+            if (filters?.status !== undefined) {
+                if (filters.status.length === 0) {
+                    // If empty array, return no results
+                    query = query.in('status', ['__none__']); // Use impossible value
+                } else {
+                    query = query.in('status', filters.status);
+                }
             }
 
             // Limit results based on zoom level

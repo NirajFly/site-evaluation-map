@@ -43,12 +43,15 @@ export default function TypeFilter({ selectedTypes, availableTypes, onTypesChang
     };
 
     const toggleAllTypes = () => {
-        if (selectedTypes.length === availableTypes.length) {
+        const allSelected = selectedTypes.length === availableTypes.length && 
+            availableTypes.every(type => selectedTypes.includes(type));
+        
+        if (allSelected) {
             // If all are selected, deselect all
             onTypesChange([]);
         } else {
             // If not all are selected, select all
-            onTypesChange(availableTypes);
+            onTypesChange([...availableTypes]);
         }
     };
 
@@ -80,7 +83,7 @@ export default function TypeFilter({ selectedTypes, availableTypes, onTypesChang
                             onClick={toggleAllTypes}
                             className="text-xs text-blue-600 hover:text-blue-800"
                         >
-                            {selectedTypes.length === availableTypes.length ? 'Deselect All' : 'Select All'}
+                            {selectedTypes.length === availableTypes.length && availableTypes.every(type => selectedTypes.includes(type)) ? 'Deselect All' : 'Select All'}
                         </button>
                     </div>
 

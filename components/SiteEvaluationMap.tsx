@@ -8,6 +8,7 @@ import { usePowerPlants } from '@/hooks/usePowerPlants';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
 import { useTransmissionLines } from '@/hooks/useTransmissionLines';
 import { useCountyFromCoords } from '@/hooks/useCountyFromCoords';
+import { useDatacenterLocations, DatacenterLocation } from '@/hooks/useDatacenterLocations';
 import { PowerPlant, TransmissionLine } from '@/lib/supabase';
 import SiteDetailCard from './SiteDetailCard';
 import TypeFilter from './TypeFilter';
@@ -19,6 +20,10 @@ import LocationAnalysisCard from './LocationAnalysisCard';
 import MapStyleToggle, { MapStyle } from './MapStyleToggle';
 import SilerCitySiteInfo from './SilerCitySiteInfo';
 import FiberNetworkToggle from './FiberNetworkToggle';
+import DatacentersToggle from './DatacentersToggle';
+import DatacenterDistanceToggle from './DatacenterDistanceToggle';
+import DatacenterDistanceFilter from './DatacenterDistanceFilter';
+import DatacenterCard from './DatacenterCard';
 import { useHighwayRoutes } from '@/hooks/useHighwayRoutes';
 
 export default function SiteEvaluationMap() {
@@ -52,6 +57,11 @@ export default function SiteEvaluationMap() {
     const [showFiberNetwork, setShowFiberNetwork] = useState(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedFiberLines, setSelectedFiberLines] = useState<Array<{ line: any; position: { x: number; y: number } }>>([]);
+    const [showDatacenters, setShowDatacenters] = useState(true);
+    const [showDatacenterDistances, setShowDatacenterDistances] = useState(false);
+    const [maxDatacenterDistance, setMaxDatacenterDistance] = useState(500);
+    const [selectedDatacenter, setSelectedDatacenter] = useState<DatacenterLocation | null>(null);
+    const [selectedDatacenterPosition, setSelectedDatacenterPosition] = useState<{x: number, y: number} | null>(null);
 
     // Siler City site coordinates
     const silerCitySite = useMemo(() => ({
@@ -132,8 +142,8 @@ export default function SiteEvaluationMap() {
     const { types: availableTypes, statuses: availableStatuses } = useFilterOptions();
 
     const filters = {
-        type: selectedTypes.length > 0 && selectedTypes.length < availableTypes.length ? selectedTypes : undefined,
-        status: selectedStatuses.length > 0 && selectedStatuses.length < availableStatuses.length ? selectedStatuses : undefined
+        type: selectedTypes.length === 0 ? [] : (selectedTypes.length < availableTypes.length ? selectedTypes : undefined),
+        status: selectedStatuses.length === 0 ? [] : (selectedStatuses.length < availableStatuses.length ? selectedStatuses : undefined)
     };
 
     const { plants, loading } = usePowerPlants({ bounds, zoom: viewState.zoom, filters });
@@ -142,21 +152,69 @@ export default function SiteEvaluationMap() {
         zoom: viewState.zoom, 
         enabled: showTransmissionLines 
     });
+    const { datacenters, loading: datacenterLoading, error: datacenterError } = useDatacenterLocations({ 
+        // Remove bounds to load all datacenters regardless of zoom/location
+        enabled: showDatacenters,
+        useView: false // Try using the table directly instead of the view
+    });
+    
+    // Calculate distance between two coordinates (Haversine formula) - returns miles
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 3959; // Earth's radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    };
+    
+    // Filter datacenters by distance from Siler City
+    const filteredDatacenters = useMemo(() => {
+        if (!showDatacenters) return [];
+        
+        return datacenters.filter(dc => {
+            if (!dc.latitude || !dc.longitude) return false;
+            
+            const lat = parseFloat(dc.latitude);
+            const lng = parseFloat(dc.longitude);
+            if (isNaN(lat) || isNaN(lng)) return false;
+            
+            const distance = calculateDistance(
+                silerCitySite.lat, silerCitySite.lng,
+                lat, lng
+            );
+            
+            return distance <= maxDatacenterDistance;
+        });
+    }, [datacenters, showDatacenters, maxDatacenterDistance, silerCitySite]);
+    
+    // Log error if there is one
+    useEffect(() => {
+        if (datacenterError) {
+            console.error('Datacenter loading error:', datacenterError);
+        }
+    }, [datacenterError]);
     
     const { countyInfo } = useCountyFromCoords({
         latitude: searchedLocation?.lat,
         longitude: searchedLocation?.lng
     });
 
-    // Initialize filters when available options are loaded
+    // Initialize filters when available options are loaded (only once)
     useEffect(() => {
         if (availableTypes.length > 0 && selectedTypes.length === 0) {
             setSelectedTypes(availableTypes);
         }
+    }, [availableTypes]); // Remove dependency on selectedTypes.length
+    
+    useEffect(() => {
         if (availableStatuses.length > 0 && selectedStatuses.length === 0) {
             setSelectedStatuses(availableStatuses);
         }
-    }, [availableTypes, availableStatuses, selectedTypes.length, selectedStatuses.length]);
+    }, [availableStatuses]); // Remove dependency on selectedStatuses.length
 
     // Show loading only after a delay to prevent flashing
     useEffect(() => {
@@ -236,18 +294,38 @@ export default function SiteEvaluationMap() {
         return '#3B82F6'; // blue
     };
 
-    // Calculate distance between two coordinates (Haversine formula) - returns miles
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-        const R = 3959; // Earth's radius in miles
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
+    // Get datacenter marker color based on status
+    const getDatacenterMarkerColor = (status: string) => {
+        const statusLower = status.toLowerCase();
+        if (statusLower.includes('operational')) {
+            return '#10B981'; // green
+        } else if (statusLower.includes('construction') || statusLower.includes('ground broken') || statusLower.includes('site work')) {
+            return '#F59E0B'; // yellow/orange
+        } else if (statusLower.includes('planned')) {
+            return '#3B82F6'; // blue
+        } else if (statusLower.includes('partially')) {
+            return '#8B5CF6'; // purple
+        }
+        return '#6B7280'; // gray
     };
+
+    // Get datacenter marker size based on power capacity
+    const getDatacenterMarkerSize = (powerCapacityMw: string | number | null) => {
+        let capacity = 0;
+        if (typeof powerCapacityMw === 'number') {
+            capacity = powerCapacityMw;
+        } else if (typeof powerCapacityMw === 'string' && powerCapacityMw !== 'null') {
+            capacity = parseFloat(powerCapacityMw) || 0;
+        }
+        
+        if (capacity >= 1000) return 30; // Hyperscale
+        if (capacity >= 500) return 26;
+        if (capacity >= 200) return 22;
+        if (capacity >= 100) return 20;
+        if (capacity >= 50) return 18;
+        return 16; // Small or unknown
+    };
+
 
     // Filter power plants near searched location using single data source
     const nearbyPowerPlants = useMemo(() => {
@@ -294,6 +372,51 @@ export default function SiteEvaluationMap() {
             }))
         };
     }, [transmissionLines]);
+    
+    // Create GeoJSON for datacenter distance lines
+    const datacenterDistanceLinesGeoJSON = useMemo(() => {
+        if (!showDatacenterDistances || !showDatacenters || datacenters.length === 0) {
+            return {
+                type: 'FeatureCollection' as const,
+                features: []
+            };
+        }
+        
+        const features = filteredDatacenters
+            .filter(dc => dc.latitude && dc.longitude)
+            .map(dc => {
+                const lat = parseFloat(dc.latitude);
+                const lng = parseFloat(dc.longitude);
+                if (isNaN(lat) || isNaN(lng)) return null;
+                
+                const distance = calculateDistance(
+                    silerCitySite.lat, silerCitySite.lng,
+                    lat, lng
+                );
+                
+                return {
+                    type: 'Feature' as const,
+                    properties: {
+                        distance: distance.toFixed(1),
+                        datacenter: dc.data_center,
+                        company: dc.company
+                    },
+                    geometry: {
+                        type: 'LineString' as const,
+                        coordinates: [
+                            [silerCitySite.lng, silerCitySite.lat],
+                            [lng, lat]
+                        ]
+                    }
+                };
+            })
+            .filter(feature => feature !== null);
+            
+        return {
+            type: 'FeatureCollection' as const,
+            features
+        };
+    }, [showDatacenterDistances, showDatacenters, filteredDatacenters, silerCitySite]);
 
     return (
         <div className="relative w-full h-screen">
@@ -322,6 +445,26 @@ export default function SiteEvaluationMap() {
                 loading={routesLoading}
                 error={routesError}
             />
+            
+            <DatacentersToggle
+                showDatacenters={showDatacenters}
+                onToggle={setShowDatacenters}
+                datacenterCount={filteredDatacenters.length}
+                loading={datacenterLoading}
+            />
+            
+            {showDatacenters && (
+                <>
+                    <DatacenterDistanceToggle
+                        showDistances={showDatacenterDistances}
+                        onToggle={setShowDatacenterDistances}
+                    />
+                    <DatacenterDistanceFilter
+                        maxDistance={maxDatacenterDistance}
+                        onDistanceChange={setMaxDatacenterDistance}
+                    />
+                </>
+            )}
             
             <MapStyleToggle
                 currentStyle={mapStyle}
@@ -376,6 +519,8 @@ export default function SiteEvaluationMap() {
                     setSelectedLine(null);
                     setSelectedLinePosition(null);
                     setSelectedFiberLines([]);
+                    setSelectedDatacenter(null);
+                    setSelectedDatacenterPosition(null);
                 }}
                 mapboxAccessToken={mapboxConfig.accessToken}
                 style={{ width: '100%', height: '100%' }}
@@ -524,6 +669,42 @@ export default function SiteEvaluationMap() {
                         />
                     </Source>
                 )}
+                
+                {/* Datacenter Distance Lines */}
+                {showDatacenterDistances && showDatacenters && datacenterDistanceLinesGeoJSON.features.length > 0 && (
+                    <Source
+                        id="datacenter-distance-lines"
+                        type="geojson"
+                        data={datacenterDistanceLinesGeoJSON}
+                    >
+                        <Layer
+                            id="datacenter-distance-lines-layer"
+                            type="line"
+                            paint={{
+                                'line-color': '#6B7280', // gray-500
+                                'line-width': 2,
+                                'line-opacity': 0.6,
+                                'line-dasharray': [2, 4]
+                            }}
+                        />
+                        <Layer
+                            id="datacenter-distance-labels"
+                            type="symbol"
+                            layout={{
+                                'text-field': ['concat', ['get', 'distance'], ' mi'],
+                                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                                'text-size': 11,
+                                'symbol-placement': 'line-center',
+                                'text-offset': [0, -1]
+                            }}
+                            paint={{
+                                'text-color': '#374151', // gray-700
+                                'text-halo-color': 'white',
+                                'text-halo-width': 2
+                            }}
+                        />
+                    </Source>
+                )}
 
                 {/* Fiber Access Point Markers */}
                 {showFiberNetwork && (
@@ -637,10 +818,19 @@ export default function SiteEvaluationMap() {
                     }}
                 >
                     <div className="relative">
-                        <div className="w-10 h-10 bg-blue-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-                            <div className="w-4 h-4 bg-white rounded-full"></div>
-                        </div>
-                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-600"></div>
+                        <svg 
+                            width="40" 
+                            height="40" 
+                            viewBox="0 0 40 40" 
+                            className="cursor-pointer hover:scale-110 transition-transform drop-shadow-lg"
+                        >
+                            <path 
+                                d="M20 1 L25 14 L39 14 L28 23 L33 36 L20 27 L7 36 L12 23 L1 14 L15 14 Z" 
+                                fill="#2563EB" 
+                                stroke="white" 
+                                strokeWidth="2"
+                            />
+                        </svg>
                         <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full mb-2">
                             <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap max-w-64 truncate">
                                 Siler City Data Center Site
@@ -649,15 +839,22 @@ export default function SiteEvaluationMap() {
                     </div>
                 </Marker>
 
-                {(showLoading || routesLoading) && (
+                {(showLoading || routesLoading || datacenterLoading) && (
                     <div className="absolute bottom-8 right-8 bg-white/90 px-3 py-2 rounded text-sm text-gray-600">
-                        {routesLoading ? 'Loading highway routes...' : 'Loading sites...'}
+                        {routesLoading ? 'Loading highway routes...' : 
+                         datacenterLoading ? 'Loading datacenters...' : 'Loading sites...'}
                     </div>
                 )}
 
                 {routesError && showFiberNetwork && (
                     <div className="absolute bottom-8 left-8 bg-red-50 border border-red-200 px-3 py-2 rounded text-sm text-red-600">
                         Failed to load fiber routes: {routesError}
+                    </div>
+                )}
+                
+                {datacenterError && showDatacenters && (
+                    <div className="absolute bottom-14 left-8 bg-red-50 border border-red-200 px-3 py-2 rounded text-sm text-red-600">
+                        Failed to load datacenters: {datacenterError}
                     </div>
                 )}
 
@@ -712,6 +909,69 @@ export default function SiteEvaluationMap() {
                         </Marker>
                     );
                 })}
+
+                {/* Datacenter Markers */}
+                {showDatacenters && filteredDatacenters.map((datacenter) => {
+                    if (!datacenter.latitude || !datacenter.longitude) return null;
+                    
+                    const lat = parseFloat(datacenter.latitude);
+                    const lng = parseFloat(datacenter.longitude);
+                    if (isNaN(lat) || isNaN(lng)) return null;
+                    
+                    const markerSize = getDatacenterMarkerSize(datacenter.power_capacity_numeric || datacenter.power_capacity_mw);
+                    const markerColor = getDatacenterMarkerColor(datacenter.status);
+                    
+                    // Calculate distance from Siler City
+                    const distanceFromSilerCity = calculateDistance(
+                        silerCitySite.lat, silerCitySite.lng,
+                        lat, lng
+                    );
+                    
+                    return (
+                        <Marker
+                            key={`datacenter-${datacenter.id}`}
+                            longitude={lng}
+                            latitude={lat}
+                            anchor="center"
+                            onClick={(e) => {
+                                e.originalEvent.stopPropagation();
+                                setSelectedDatacenter(datacenter);
+                                // Get the screen position using the marker's coordinates
+                                if (mapRef.current) {
+                                    const map = mapRef.current.getMap();
+                                    const point = map.project([lng, lat]);
+                                    setSelectedDatacenterPosition({
+                                        x: point.x,
+                                        y: point.y
+                                    });
+                                }
+                            }}
+                        >
+                            <div
+                                className="cursor-pointer hover:scale-110 transition-transform duration-150 relative"
+                                style={{
+                                    width: 0,
+                                    height: 0,
+                                    borderLeft: `${markerSize/2}px solid transparent`,
+                                    borderRight: `${markerSize/2}px solid transparent`,
+                                    borderBottom: `${markerSize}px solid ${markerColor}`,
+                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                                }}
+                                title={`${datacenter.company} - ${datacenter.data_center}`}
+                            >
+                                <div className="absolute inset-0 flex items-center justify-center" style={{
+                                    top: `${markerSize/3}px`,
+                                    left: `-${markerSize/2}px`,
+                                    width: `${markerSize}px`
+                                }}>
+                                    <span className="text-white text-xs font-bold select-none pointer-events-none">
+                                        DC
+                                    </span>
+                                </div>
+                            </div>
+                        </Marker>
+                    );
+                })}
             </Map>
 
             {selectedPlant && (
@@ -732,6 +992,21 @@ export default function SiteEvaluationMap() {
                     onClose={() => {
                         setSelectedLine(null);
                         setSelectedLinePosition(null);
+                    }}
+                />
+            )}
+
+            {selectedDatacenter && (
+                <DatacenterCard
+                    datacenter={selectedDatacenter}
+                    position={selectedDatacenterPosition || undefined}
+                    distanceFromSilerCity={selectedDatacenter ? calculateDistance(
+                        silerCitySite.lat, silerCitySite.lng,
+                        parseFloat(selectedDatacenter.latitude), parseFloat(selectedDatacenter.longitude)
+                    ) : undefined}
+                    onClose={() => {
+                        setSelectedDatacenter(null);
+                        setSelectedDatacenterPosition(null);
                     }}
                 />
             )}

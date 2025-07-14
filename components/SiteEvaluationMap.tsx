@@ -23,6 +23,8 @@ import TogglePanel from './TogglePanel';
 
 export default function SiteEvaluationMap() {
     const mapRef = useRef<MapRef>(null);
+    const typesInitialized = useRef(false);
+    const statusesInitialized = useRef(false);
     const [viewState, setViewState] = useState(() => ({
         longitude: mapboxConfig.defaultCenter.longitude,
         latitude: mapboxConfig.defaultCenter.latitude,
@@ -238,14 +240,16 @@ export default function SiteEvaluationMap() {
 
     // Initialize filters when available options are loaded (only once)
     useEffect(() => {
-        if (availableTypes.length > 0 && selectedTypes.length === 0) {
+        if (availableTypes.length > 0 && selectedTypes.length === 0 && !typesInitialized.current) {
             setSelectedTypes(availableTypes);
+            typesInitialized.current = true;
         }
     }, [availableTypes, selectedTypes.length]);
     
     useEffect(() => {
-        if (availableStatuses.length > 0 && selectedStatuses.length === 0) {
+        if (availableStatuses.length > 0 && selectedStatuses.length === 0 && !statusesInitialized.current) {
             setSelectedStatuses(availableStatuses);
+            statusesInitialized.current = true;
         }
     }, [availableStatuses, selectedStatuses.length]);
 

@@ -24,6 +24,8 @@ import DatacentersToggle from './DatacentersToggle';
 import DatacenterDistanceToggle from './DatacenterDistanceToggle';
 import DatacenterDistanceFilter from './DatacenterDistanceFilter';
 import DatacenterCard from './DatacenterCard';
+import FiberInfrastructureToggle from './FiberInfrastructureToggle';
+import DatacenterProximityToggle from './DatacenterProximityToggle';
 import { useHighwayRoutes } from '@/hooks/useHighwayRoutes';
 
 export default function SiteEvaluationMap() {
@@ -55,6 +57,8 @@ export default function SiteEvaluationMap() {
     const [showSilerCityInfo, setShowSilerCityInfo] = useState(false);
     const [silerCityPosition, setSilerCityPosition] = useState<{x: number, y: number} | null>(null);
     const [showFiberNetwork, setShowFiberNetwork] = useState(true);
+    const [showFiberInfrastructure, setShowFiberInfrastructure] = useState(true);
+    const [showDatacenterProximity, setShowDatacenterProximity] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [selectedFiberLines, setSelectedFiberLines] = useState<Array<{ line: any; position: { x: number; y: number } }>>([]);
     const [showDatacenters, setShowDatacenters] = useState(true);
@@ -70,12 +74,41 @@ export default function SiteEvaluationMap() {
         name: "1000 Carolina Core Pkwy, Siler City, NC 27344"
     }), []);
 
+    // Major data centers and connection points for proximity visualization
+    const proximityPoints = useMemo(() => [
+        // East Coast Data Centers
+        { name: "Ashburn", lat: 39.0438, lng: -77.4874, type: "datacenter", icon: "server" },
+        { name: "New York", lat: 40.7128, lng: -74.0060, type: "datacenter", icon: "server" },
+        { name: "Atlanta", lat: 33.7490, lng: -84.3880, type: "datacenter", icon: "server" },
+        { name: "Miami", lat: 25.7617, lng: -80.1918, type: "datacenter", icon: "server" },
+        
+        // Central US
+        { name: "Chicago", lat: 41.8781, lng: -87.6298, type: "datacenter", icon: "server" },
+        { name: "Dallas", lat: 32.7767, lng: -96.7970, type: "datacenter", icon: "server" },
+        { name: "Nashville", lat: 36.1627, lng: -86.7816, type: "city", icon: "globe" },
+        
+        // West Coast
+        { name: "Los Angeles", lat: 34.0522, lng: -118.2437, type: "datacenter", icon: "server" },
+        { name: "San Francisco", lat: 37.7749, lng: -122.4194, type: "datacenter", icon: "server" },
+        { name: "Seattle", lat: 47.6062, lng: -122.3321, type: "datacenter", icon: "server" },
+        
+        // International Connection Points
+        { name: "Toronto", lat: 43.6532, lng: -79.3832, type: "international", icon: "globe" },
+        { name: "London", lat: 51.5074, lng: -0.1278, type: "international", icon: "earth" },
+        
+        // Regional Important Cities
+        { name: "Raleigh", lat: 35.7796, lng: -78.6382, type: "city", icon: "globe" },
+        { name: "Charlotte", lat: 35.2271, lng: -80.8431, type: "city", icon: "globe" },
+        { name: "Richmond", lat: 37.5407, lng: -77.4360, type: "city", icon: "globe" },
+        { name: "Jacksonville", lat: 30.3322, lng: -81.6557, type: "city", icon: "globe" },
+    ], []);
+
     // Fetch highway routes using Mapbox API
     const { routes: highwayRoutes, loading: routesLoading, error: routesError } = useHighwayRoutes({
         enabled: showFiberNetwork
     });
 
-    // Hardcoded rail route for better visibility
+    // Hardcoded rail route for better visibility - passing through Staley
     const railRoute = useMemo(() => ({
         type: 'Feature' as const,
         properties: {
@@ -87,7 +120,7 @@ export default function SiteEvaluationMap() {
         geometry: {
             type: 'LineString' as const,
             coordinates: [
-                // Hardcoded Norfolk Southern rail line from Greensboro to Sanford
+                // Norfolk Southern rail line from Greensboro through Staley to Sanford
                 [-79.7900, 36.0700], // Greensboro area
                 [-79.7500, 36.0200],
                 [-79.7100, 35.9700],
@@ -96,7 +129,11 @@ export default function SiteEvaluationMap() {
                 [-79.6200, 35.8500],
                 [-79.5900, 35.8100],
                 [-79.5700, 35.7800],
-                [-79.5500, 35.7500],
+                [-79.5650, 35.7750], // Approaching Staley area
+                [-79.5600, 35.7700], // Staley, NC area
+                [-79.5550, 35.7650],
+                [-79.5520, 35.7600],
+                [-79.5500, 35.7500], // Near Siler City
                 [-79.5350, 35.7200],
                 [-79.5250, 35.6900],
                 [-79.5200, 35.6600],
@@ -418,6 +455,44 @@ export default function SiteEvaluationMap() {
         };
     }, [showDatacenterDistances, showDatacenters, filteredDatacenters, silerCitySite]);
 
+    // Create GeoJSON for proximity visualization (like reference image)
+    const proximityLinesGeoJSON = useMemo(() => {
+        if (!showDatacenterProximity) {
+            return {
+                type: 'FeatureCollection' as const,
+                features: []
+            };
+        }
+        
+        const features = proximityPoints.map(point => {
+            const distance = calculateDistance(
+                silerCitySite.lat, silerCitySite.lng,
+                point.lat, point.lng
+            );
+            
+            return {
+                type: 'Feature' as const,
+                properties: {
+                    distance: `${Math.round(distance)} miles`,
+                    name: point.name,
+                    type: point.type
+                },
+                geometry: {
+                    type: 'LineString' as const,
+                    coordinates: [
+                        [silerCitySite.lng, silerCitySite.lat],
+                        [point.lng, point.lat]
+                    ]
+                }
+            };
+        });
+        
+        return {
+            type: 'FeatureCollection' as const,
+            features
+        };
+    }, [showDatacenterProximity, proximityPoints, silerCitySite]);
+
     return (
         <div className="relative w-full h-screen">
             <SearchBox onLocationSelect={handleLocationSelect} />
@@ -465,6 +540,17 @@ export default function SiteEvaluationMap() {
                     />
                 </>
             )}
+            
+            <FiberInfrastructureToggle
+                showFiberInfrastructure={showFiberInfrastructure}
+                onToggle={setShowFiberInfrastructure}
+                accessPointCount={9}
+            />
+            
+            <DatacenterProximityToggle
+                showProximity={showDatacenterProximity}
+                onToggle={setShowDatacenterProximity}
+            />
             
             <MapStyleToggle
                 currentStyle={mapStyle}
@@ -603,7 +689,6 @@ export default function SiteEvaluationMap() {
                                 'line-color': ['get', 'color'],
                                 'line-width': 6,
                                 'line-opacity': 1.0,
-                                'line-dasharray': [8, 4],
                                 'line-offset': 15
                             }}
                         />
@@ -617,7 +702,6 @@ export default function SiteEvaluationMap() {
                                 'line-color': ['get', 'color'],
                                 'line-width': 5,
                                 'line-opacity': 1.0,
-                                'line-dasharray': [6, 3],
                                 'line-offset': -12
                             }}
                         />
@@ -706,8 +790,46 @@ export default function SiteEvaluationMap() {
                     </Source>
                 )}
 
+                {/* Proximity Lines (like reference image) */}
+                {showDatacenterProximity && proximityLinesGeoJSON.features.length > 0 && (
+                    <Source
+                        id="proximity-lines"
+                        type="geojson"
+                        data={proximityLinesGeoJSON}
+                    >
+                        <Layer
+                            id="proximity-lines-layer"
+                            type="line"
+                            paint={{
+                                'line-color': '#000000', // black dashed lines like in reference
+                                'line-width': 2,
+                                'line-opacity': 0.8,
+                                'line-dasharray': [8, 6]
+                            }}
+                        />
+                        <Layer
+                            id="proximity-labels"
+                            type="symbol"
+                            layout={{
+                                'text-field': ['get', 'distance'],
+                                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                                'text-size': 14,
+                                'symbol-placement': 'line-center',
+                                'text-offset': [0, -1],
+                                'text-allow-overlap': false,
+                                'text-ignore-placement': false
+                            }}
+                            paint={{
+                                'text-color': '#000000',
+                                'text-halo-color': 'white',
+                                'text-halo-width': 3
+                            }}
+                        />
+                    </Source>
+                )}
+
                 {/* Fiber Access Point Markers */}
-                {showFiberNetwork && (
+                {showFiberInfrastructure && (
                     <>
                         {/* Primary Site Access Points */}
                         <Marker
@@ -750,6 +872,20 @@ export default function SiteEvaluationMap() {
                                 <div className="w-3 h-3 bg-gray-700 rounded-full border-2 border-white shadow-lg"></div>
                                 <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 bg-white px-1 rounded shadow">
                                     Greensboro Hub
+                                </div>
+                            </div>
+                        </Marker>
+                        
+                        {/* Staley Rail ROW Junction */}
+                        <Marker
+                            longitude={-79.5600}
+                            latitude={35.7700}
+                            anchor="center"
+                        >
+                            <div className="relative">
+                                <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-lg"></div>
+                                <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 bg-white px-1 rounded shadow">
+                                    Staley Rail ROW
                                 </div>
                             </div>
                         </Marker>
@@ -798,6 +934,40 @@ export default function SiteEvaluationMap() {
                         </Marker>
                     </>
                 )}
+
+                {/* Proximity Points Markers */}
+                {showDatacenterProximity && proximityPoints.map((point, index) => (
+                    <Marker
+                        key={`proximity-${index}`}
+                        longitude={point.lng}
+                        latitude={point.lat}
+                        anchor="center"
+                    >
+                        <div className="relative">
+                            {/* Different icons based on type */}
+                            {point.type === 'datacenter' && (
+                                <div className="w-6 h-6 bg-gray-100 border-2 border-gray-600 rounded flex items-center justify-center">
+                                    <div className="text-xs font-bold text-gray-600">🖥️</div>
+                                </div>
+                            )}
+                            {point.type === 'city' && (
+                                <div className="w-5 h-5 bg-blue-100 border-2 border-blue-600 rounded-full flex items-center justify-center">
+                                    <div className="text-xs">🌐</div>
+                                </div>
+                            )}
+                            {point.type === 'international' && (
+                                <div className="w-6 h-6 bg-purple-100 border-2 border-purple-600 rounded flex items-center justify-center">
+                                    <div className="text-xs">🌍</div>
+                                </div>
+                            )}
+                            
+                            {/* City/Location Label */}
+                            <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-gray-800 bg-white px-2 py-1 rounded shadow-lg border whitespace-nowrap">
+                                {point.name}
+                            </div>
+                        </div>
+                    </Marker>
+                ))}
 
                 {/* Siler City Site Marker */}
                 <Marker

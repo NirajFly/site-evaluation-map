@@ -12,7 +12,7 @@ export default function DatacenterDistanceFilter({
     onDistanceChange
 }: DatacenterDistanceFilterProps) {
     return (
-        <div className="absolute top-40 left-80 z-10">
+        <div className="absolute top-52 left-80 z-10">
             <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3 w-64">
                 <div className="flex items-center space-x-3 mb-3">
                     <Radius 

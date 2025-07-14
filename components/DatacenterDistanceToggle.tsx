@@ -12,7 +12,7 @@ export default function DatacenterDistanceToggle({
     onToggle
 }: DatacenterDistanceToggleProps) {
     return (
-        <div className="absolute top-28 left-80 z-10">
+        <div className="absolute top-36 left-80 z-10">
             <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
                 <div className="flex items-center space-x-3">
                     <Ruler 

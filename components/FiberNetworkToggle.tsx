@@ -43,12 +43,12 @@ export default function FiberNetworkToggle({ showFiberNetwork, onToggle, loading
                             <span className="text-gray-600">County open access</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-px bg-purple-500 border-dashed border-t"></div>
+                            <div className="w-4 h-px bg-purple-500"></div>
                             <span className="text-gray-600">MCNC middle-mile</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="w-4 h-px bg-green-500 border-dashed border-t-2"></div>
-                            <span className="text-gray-600">Zayo long-haul</span>
+                            <div className="w-4 h-px bg-green-500"></div>
+                            <span className="text-gray-600">Zayo long-haul (via Staley)</span>
                         </div>
                         <div className="border-t border-gray-200 pt-1.5 mt-1.5">
                             <div className="flex items-center gap-2">
